@@ -97,7 +97,7 @@ def create_application() -> FastAPI:
     # Include API router
     app.include_router(
         api_router,
-        prefix=settings.API_V1_STR
+        prefix=settings.API_STR
     )
     
     # Mount static files for uploads
@@ -121,7 +121,7 @@ async def root():
         "name": settings.APP_NAME,
         "version": "1.0.0",
         "docs": "/docs" if settings.DEBUG else None,
-        "api": settings.API_V1_STR
+        "api": settings.API_STR
     }
 
 
