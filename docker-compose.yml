@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: taskmaster_db
+    environment:
+      POSTGRES_USER: taskmaster
+      POSTGRES_PASSWORD: taskmaster_password
+      POSTGRES_DB: taskmaster
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taskmaster -d taskmaster"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - taskmaster_network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: taskmaster_app
+    environment:
+      DATABASE_URL: postgresql+asyncpg://taskmaster:taskmaster_password@db:5432/taskmaster
+      SECRET_KEY: ${SECRET_KEY:-your-super-secret-key-change-this-in-production}
+      REFRESH_SECRET_KEY: ${REFRESH_SECRET_KEY:-your-refresh-secret-key-change-this}
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 15
+      REFRESH_TOKEN_EXPIRE_DAYS: 7
+      ALLOWED_ORIGINS: '["http://localhost:3000","http://localhost:8000"]'
+      DEBUG: "False"
+      MAX_FILE_SIZE_MB: 10
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - uploads_data:/app/uploads
+    networks:
+      - taskmaster_network
+    command: >
+      sh -c "
+        alembic upgrade head &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000
+      "
+
+volumes:
+  postgres_data:
+  uploads_data:
+
+networks:
+  taskmaster_network:
+    driver: bridge
