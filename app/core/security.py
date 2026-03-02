@@ -12,11 +12,25 @@ from fastapi import HTTPException, status
 
 from app.core.config import settings
 
-# Password hashing context
+# Password hashing context — using Argon2id (winner of Password Hashing Competition)
+# argon2-cffi is required: pip install argon2-cffi
 if settings.ENV == "production":
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)
+    pwd_context = CryptContext(
+        schemes=["argon2"],
+        deprecated="auto",
+        argon2__time_cost=3,       # number of iterations
+        argon2__memory_cost=65536, # 64 MiB
+        argon2__parallelism=2,
+    )
 else:
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=4)
+    # Faster params for dev/test to keep tests snappy
+    pwd_context = CryptContext(
+        schemes=["argon2"],
+        deprecated="auto",
+        argon2__time_cost=1,
+        argon2__memory_cost=8192,  # 8 MiB
+        argon2__parallelism=1,
+    )
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
